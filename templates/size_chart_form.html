@@ -1,0 +1,17 @@
+<form id="{{ form_id }}" class="size-chart-form form-stack{% if not in_dialog %} card{% endif %}">
+    {% if not in_dialog %}<h2>Add a size chart</h2>{% endif %}
+    <label>Chart name<input name="name" required maxlength="120" placeholder="Wide straight leg (inches)"{% if in_dialog %} autofocus{% endif %}></label>
+    <label>Upload an existing image<input type="file" name="image" accept="image/jpeg,image/png,image/webp"></label>
+    <label>Read a handwritten chart photo
+        <small>Uses one AI request. Check the transcribed values before saving.</small>
+        <input type="file" data-chart-source accept="image/jpeg,image/png,image/webp">
+    </label>
+    <div class="actions"><button class="button secondary" type="button" data-read-chart>Read photo into table</button></div>
+    <label>Size labels <small>For uploaded images, enter labels for captions, for example 28, 30, 32.</small><input name="listed_sizes" maxlength="300"></label>
+    <label>Or generate an image from measurements
+        <small>Use comma-separated values and include the units in the column headings.</small>
+        <textarea name="measurements" rows="5" maxlength="5000" placeholder="Size, Waist (in), Length (in)&#10;28, 28, 30&#10;30, 30, 31"></textarea>
+    </label>
+    <p class="notice chart-form-message" role="status" hidden></p>
+    <div class="actions"><button type="submit" class="button primary">{% if in_dialog %}Save and select chart{% else %}Save size chart{% endif %}</button></div>
+</form>

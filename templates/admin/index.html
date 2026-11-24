@@ -1,0 +1,13 @@
+﻿{% extends "admin/index.html" %}
+{% block content %}
+<div class="studio-admin-cards">
+    <a href="{% url 'dashboard' %}"><strong>Catalog workspace</strong><span>Extract product details, review images and publish.</span></a>
+    {% if perms.catalog_pipeline.add_modelprofile %}
+    <a href="{% url 'admin:catalog_pipeline_modelprofile_add' %}"><strong>Add a model profile</strong><span>Upload reference photos and save reusable styling notes.</span></a>
+    {% endif %}
+    {% if perms.catalog_pipeline.view_productjob or perms.catalog_pipeline.change_productjob %}
+    <a href="{% url 'admin:catalog_pipeline_productjob_changelist' %}"><strong>Product jobs</strong><span>Inspect workflow status and WooCommerce records.</span></a>
+    {% endif %}
+</div>
+{{ block.super }}
+{% endblock %}

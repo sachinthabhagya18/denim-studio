@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+
+{% block title %}Alpine.js Examples - Django{% endblock %}
+
+{% block content %}
+<div x-data="demoApp()">
+    <h2>🎨 Alpine.js Examples & Components</h2>
+    
+    <!-- Toggle Example -->
+    <div class="card">
+        <h3>1. Toggle Component</h3>
+        <button @click="showToggle = !showToggle">
+            <span x-text="showToggle ? '👁️ Hide' : '👀 Show'"></span> Details
+        </button>
+        <div x-show="showToggle" class="transition" style="margin-top: 15px; padding: 15px; background: #e3f2fd; border-radius: 5px;">
+            <p>✨ This content toggles on and off!</p>
+            <p>Use <code>x-show</code> to toggle visibility or <code>x-if</code> to remove from DOM.</p>
+        </div>
+    </div>
+    
+    <!-- Form Validation Example -->
+    <div class="card">
+        <h3>2. Form Validation</h3>
+        <div>
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Email:</label>
+            <input x-model="email" type="email" placeholder="Enter your email">
+            <span x-show="isValidEmail()" style="color: #28a745; font-size: 12px;">
+                ✓ Valid email format
+            </span>
+            <span x-show="!isValidEmail() && email.length > 0" style="color: #dc3545; font-size: 12px;">
+                ✗ Invalid email format
+            </span>
+        </div>
+        
+        <div style="margin-top: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">Password:</label>
+            <input x-model="password" :type="showPassword ? 'text' : 'password'" placeholder="Enter password">
+            <button @click="showPassword = !showPassword" style="background: #667eea; padding: 5px 10px; font-size: 12px;">
+                <span x-text="showPassword ? '👁️ Hide' : '👀 Show'"></span>
+            </button>
+            <div style="margin-top: 10px;">
+                <div style="height: 5px; background: #ddd; border-radius: 5px; overflow: hidden;">
+                    <div :style="{ width: passwordStrength + '%' }" :style="{ background: getPasswordColor() }" style="height: 100%; transition: width 0.3s;"></div>
+                </div>
+                <span style="font-size: 12px;" x-text="'Strength: ' + getPasswordStrength()"></span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Dropdown/Select Example -->
+    <div class="card">
+        <h3>3. Dynamic Dropdown</h3>
+        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Select an option:</label>
+        <select x-model="selectedOption">
+            <option value="">-- Choose --</option>
+            <option value="option1">Option 1 - Basic</option>
+            <option value="option2">Option 2 - Advanced</option>
+            <option value="option3">Option 3 - Expert</option>
+        </select>
+        <div x-show="selectedOption" class="alert alert-info" style="margin-top: 15px;">
+            You selected: <strong x-text="selectedOption"></strong>
+        </div>
+    </div>
+    
+    <!-- Conditional Rendering -->
+    <div class="card">
+        <h3>4. Conditional Rendering</h3>
+        <label style="display: block; margin-bottom: 10px;">
+            <input type="checkbox" x-model="showUser" style="width: auto; cursor: pointer;">
+            Show User Profile
+        </label>
+        
+        <div x-show="showUser" class="transition" style="padding: 15px; background: #f5f5f5; border-radius: 5px;">
+            <p><strong>Name:</strong> John Doe</p>
+            <p><strong>Email:</strong> john@example.com</p>
+            <p><strong>Role:</strong> <span class="badge badge-primary" x-text="userRole"></span></p>
+        </div>
+        
+        <div x-show="!showUser" class="alert alert-warning" style="margin-top: 15px;">
+            User profile is hidden. Check the box above to show it.
+        </div>
+    </div>
+    
+    <!-- Loop/Template Example -->
+    <div class="card">
+        <h3>5. Loop with Templates</h3>
+        <p style="margin-bottom: 15px;">Items: <strong x-text="items.length"></strong></p>
+        
+        <div class="grid">
+            <template x-for="item in items" :key="item.id">
+                <div style="padding: 15px; background: #f9f9f9; border-radius: 5px; border-left: 4px solid #667eea;">
+                    <h4 x-text="item.name" style="margin-top: 0;"></h4>
+                    <p x-text="item.description" style="color: #666; margin: 5px 0;"></p>
+                    <span class="badge" :class="'badge-' + item.level" x-text="item.level.toUpperCase()"></span>
+                </div>
+            </template>
+        </div>
+        
+        <button @click="addItem()" style="margin-top: 15px;">➕ Add New Item</button>
+    </div>
+    
+    <!-- Computed Properties Example -->
+    <div class="card">
+        <h3>6. Computed Properties</h3>
+        <input x-model.number="quantity" type="number" placeholder="Quantity" min="1">
+        <input x-model.number="price" type="number" placeholder="Price" min="0" step="0.01">
+        
+        <div style="margin-top: 15px; padding: 15px; background: #f5f5f5; border-radius: 5px;">
+            <p><strong>Quantity:</strong> <span x-text="quantity"></span></p>
+            <p><strong>Unit Price:</strong> $<span x-text="price.toFixed(2)"></span></p>
+            <p><strong>Subtotal:</strong> $<span x-text="(quantity * price).toFixed(2)"></span></p>
+            <p><strong>Tax (10%):</strong> $<span x-text="(quantity * price * 0.1).toFixed(2)"></span></p>
+            <p style="font-size: 18px; font-weight: bold; color: #667eea;">
+                <strong>Total:</strong> $<span x-text="(quantity * price * 1.1).toFixed(2)"></span>
+            </p>
+        </div>
+    </div>
+    
+    <!-- Event Handling -->
+    <div class="card">
+        <h3>7. Event Handling</h3>
+        <input x-model="inputValue" @keydown.enter="handleEnter()" @keyup="handleKeyup()" type="text" placeholder="Type something...">
+        <div style="margin-top: 10px; color: #666; font-size: 12px;">
+            <p>Characters: <strong x-text="inputValue.length"></strong></p>
+            <p x-show="inputValue.length > 10" style="color: #dc3545;">⚠️ Character limit approaching (20 chars max)</p>
+            <p x-show="inputValue === 'hello'" style="color: #28a745;">🎉 You typed "hello"!</p>
+        </div>
+    </div>
+    
+    <!-- Modifiers Example -->
+    <div class="card">
+        <h3>8. Event Modifiers</h3>
+        <input 
+            x-model="searchText" 
+            @keydown.debounce.500ms="performSearch()"
+            type="text" 
+            placeholder="Type to search (debounced)..."
+        >
+        <div x-show="searchText.length > 0" style="margin-top: 15px; padding: 10px; background: #e3f2fd; border-radius: 5px;">
+            Searching for: <strong x-text="searchText"></strong>
+        </div>
+    </div>
+    
+    <!-- Two-Way Binding -->
+    <div class="card">
+        <h3>9. Two-Way Data Binding</h3>
+        <input x-model="rangeValue" type="range" min="0" max="100" style="width: 100%; height: 10px;">
+        <div style="margin-top: 15px; text-align: center;">
+            <div style="font-size: 48px; font-weight: bold; color: #667eea;">
+                <span x-text="rangeValue"></span>%
+            </div>
+            <div style="margin-top: 10px; height: 20px; background: #ddd; border-radius: 10px; overflow: hidden;">
+                <div :style="{ width: rangeValue + '%', background: '#667eea' }" style="height: 100%; transition: width 0.1s;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alert Messages -->
+    <div class="card">
+        <h3>10. Alert Messages</h3>
+        <button @click="showSuccess = true">✓ Show Success</button>
+        <button @click="showError = true">✗ Show Error</button>
+        <button @click="showWarning = true">⚠️ Show Warning</button>
+        
+        <div x-show="showSuccess" class="alert alert-success transition" style="margin-top: 15px;">
+            <strong>✓ Success!</strong> This is a success message.
+            <button @click="showSuccess = false" style="float: right; background: transparent; color: #155724; padding: 0;">✕</button>
+        </div>
+        
+        <div x-show="showError" class="alert alert-danger transition" style="margin-top: 15px;">
+            <strong>✗ Error!</strong> This is an error message.
+            <button @click="showError = false" style="float: right; background: transparent; color: #721c24; padding: 0;">✕</button>
+        </div>
+        
+        <div x-show="showWarning" class="alert alert-warning transition" style="margin-top: 15px;">
+            <strong>⚠️ Warning!</strong> This is a warning message.
+            <button @click="showWarning = false" style="float: right; background: transparent; color: #856404; padding: 0;">✕</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function demoApp() {
+        return {
+            showToggle: false,
+            email: '',
+            password: '',
+            showPassword: false,
+            selectedOption: '',
+            showUser: false,
+            userRole: 'Admin',
+            items: [
+                { id: 1, name: 'Item 1', description: 'First item', level: 'primary' },
+                { id: 2, name: 'Item 2', description: 'Second item', level: 'success' },
+                { id: 3, name: 'Item 3', description: 'Third item', level: 'warning' },
+            ],
+            quantity: 1,
+            price: 10.00,
+            inputValue: '',
+            searchText: '',
+            rangeValue: 50,
+            showSuccess: false,
+            showError: false,
+            showWarning: false,
+            
+            isValidEmail() {
+                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email);
+            },
+            
+            get passwordStrength() {
+                let strength = 0;
+                if (this.password.length >= 6) strength += 25;
+                if (this.password.length >= 10) strength += 25;
+                if (/[a-z]/.test(this.password) && /[A-Z]/.test(this.password)) strength += 25;
+                if (/[0-9]/.test(this.password)) strength += 25;
+                return strength;
+            },
+            
+            getPasswordStrength() {
+                const strength = this.passwordStrength;
+                if (strength < 25) return 'Weak';
+                if (strength < 50) return 'Fair';
+                if (strength < 75) return 'Good';
+                return 'Strong';
+            },
+            
+            getPasswordColor() {
+                const strength = this.passwordStrength;
+                if (strength < 25) return '#dc3545';
+                if (strength < 50) return '#ffc107';
+                if (strength < 75) return '#17a2b8';
+                return '#28a745';
+            },
+            
+            addItem() {
+                const newId = Math.max(...this.items.map(i => i.id), 0) + 1;
+                this.items.push({
+                    id: newId,
+                    name: `Item ${newId}`,
+                    description: 'New dynamically added item',
+                    level: ['primary', 'success', 'warning'][Math.floor(Math.random() * 3)]
+                });
+            },
+            
+            handleEnter() {
+                console.log('Enter pressed with:', this.inputValue);
+            },
+            
+            handleKeyup() {
+                // Real-time character counter
+            },
+            
+            performSearch() {
+                console.log('Searching for:', this.searchText);
+            }
+        }
+    }
+</script>
+{% endblock %}

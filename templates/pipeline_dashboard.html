@@ -1,0 +1,312 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Denim Studio</title>
+    <link rel="stylesheet" href="{% static 'studio.css' %}">
+    <script src="{% static 'studio.js' %}" defer></script>
+</head>
+<body>
+<div class="shell">
+    <aside class="rail">
+        <a class="brand" href="{% url 'dashboard' %}"><span class="mark">D</span><span>Denim Studio<small>Catalog workspace</small></span></a>
+        <nav aria-label="Workspace">
+            <button data-tab="intake" aria-current="page">New product</button>
+            <button data-tab="jobs">Product queue</button>
+            <button data-tab="profiles">Model profiles</button>
+            <button data-tab="charts">Size charts</button>
+            <button data-tab="image-settings">Image generation</button>
+            <button data-tab="social-settings">Social connections</button>
+            <button data-tab="store">Store connection</button>
+        </nav>
+        <div class="rail-footer">
+            <a href="{% url 'admin:index' %}">Administration</a>
+            <form action="{% url 'admin:logout' %}" method="post">{% csrf_token %}<button>Sign out</button></form>
+        </div>
+    </aside>
+    <main>
+        <header class="top"><span>Catalog workspace</span><span class="account">{{ request.user.get_username }}</span></header>
+        <div class="page">
+            <div id="notice" role="status" aria-live="polite" hidden></div>
+            <section id="intake" class="screen">
+                <header class="page-heading">
+                    <h1>New product</h1>
+                    <p>Enter the source details and upload photos of the actual garment.</p>
+                </header>
+                <div class="intake-grid">
+                    <form class="card form-stack" id="intake-form">
+                        <label>Product details
+                            <textarea name="raw_product_text" rows="8" required maxlength="20000" placeholder="Paste product notes or details copied from a store page"></textarea>
+                        </label>
+                        <label>Fabric reference <small>Optional close-up of this garment. If omitted, we crop the first garment photo.</small>
+                            <input name="fabric_reference" type="file" accept="image/jpeg,image/png,image/webp">
+                        </label>
+                        <label class="upload">Garment photos
+                            <small>Choose up to 7 photos of the same garment. For try-on, make the first photo a clear front photo of the jeans, preferably laid flat. JPEG, PNG or WebP, up to 10 MB each.</small>
+                            <input name="garment_images" type="file" accept="image/jpeg,image/png,image/webp" multiple required>
+                        </label>
+                        <label>Model profile
+                            <select name="model_profile_id" id="profile-select"><option value="">Use a generic studio model</option></select>
+                        </label>
+                        <div id="intake-profile-preview" class="intake-profile-preview" hidden></div>
+                        <div class="actions"><button class="button primary">Extract product details</button></div>
+                    </form>
+                    <aside class="card guide">
+                        <h2>From intake to store</h2>
+                        <ol class="steps">
+                            <li><strong>Extract details</strong><p>One text request organizes facts from your product notes.</p></li>
+                            <li><strong>Check the product</strong><p>Confirm the name, fit, wash and price before generating images.</p></li>
+                            <li><strong>Generate and review</strong><p>Check three product views and a fabric close-up from the original photo.</p></li>
+                            <li><strong>Approve or publish</strong><p>Save the approval or send the product to WooCommerce.</p></li>
+                        </ol>
+                        <button type="button" class="button secondary" data-tab="profiles">Manage model profiles</button>
+                    </aside>
+                </div>
+            </section>
+            <section id="jobs" class="screen" hidden>
+                <header class="page-heading"><h1>Product queue</h1><p>Open a product to check details, review images or publish.</p></header>
+                <form class="actions search" id="job-search"><input name="search" aria-label="Find by product name or SKU" placeholder="Search by product name or SKU"><button class="button secondary">Search</button></form>
+                <div class="card list" id="job-list"></div>
+                <div class="actions" id="job-pages" hidden>
+                    <button id="job-prev" class="button secondary">Previous</button>
+                    <button id="job-next" class="button secondary">Next</button>
+                </div>
+            </section>
+            <section id="review" class="screen" hidden>
+                <button class="plain" data-tab="jobs">Product queue</button>
+                <header class="page-heading"><div class="heading-row"><h1 id="job-title">Product review</h1><span id="job-status" class="status"></span></div><p id="job-instructions"></p></header>
+                <div class="review-layout">
+                <div class="review-content">
+                <p id="job-error" class="notice error" hidden></p>
+                <p id="extraction-notice" class="notice" hidden></p>
+                <div id="gallery-message" class="notice" role="status" aria-live="polite" hidden></div>
+                <div id="product-images" class="image-grid" hidden></div>
+                <details id="reference-photos" class="card source-card" hidden>
+                    <summary>Reference photos</summary>
+                    <div id="source-images" class="source-images"></div>
+                </details>
+                <details id="fabric-controls" class="card source-card" hidden>
+                    <summary>Adjust the fabric crop</summary>
+                    <form id="fabric-form" class="form-stack">
+                        <p>Choose a clean area of denim without seams or background. Click the source photo or adjust the crop position.</p>
+                        <div class="crop-target" id="crop-target"><img id="crop-source" alt="Original fabric source"><span id="crop-marker" aria-hidden="true"></span></div>
+                        <div class="field-grid">
+                            <label>Horizontal position<input name="center_x" type="range" min="0" max="100" value="50"></label>
+                            <label>Vertical position<input name="center_y" type="range" min="0" max="100" value="50"></label>
+                        </div>
+                        <div class="actions"><button class="button secondary">Save fabric crop</button></div>
+                    </form>
+                </details>
+                <form id="product-form" class="card form-stack" hidden>
+                    <h2>Product details</h2>
+                    <div class="field-grid">
+                        <label>Product name<input name="title" required maxlength="200"></label>
+                        <label>Jean type<input name="jean_type" required maxlength="120"></label>
+                        <label>SKU<input name="sku" maxlength="100"></label>
+                        <label>Regular price<input name="regular_price" type="text" inputmode="decimal" placeholder="49.00"></label>
+                        <label>Sale price<input name="sale_price" type="text" inputmode="decimal"></label>
+                        <label>Stock quantity<input name="stock_quantity" type="number" min="0" step="1"></label>
+                        <label>SEO title<input name="meta_title" maxlength="200"></label>
+                        <label>SEO description<input name="meta_description" maxlength="500"></label>
+                    </div>
+                    <label class="checkbox"><input name="manage_stock" type="checkbox"> Track inventory</label>
+                    <label>Short description<textarea name="short_description" rows="3" maxlength="1200"></textarea></label>
+                    <label>Product description<textarea name="description" rows="5" maxlength="6000"></textarea></label>
+                    <label id="generation-notes-label">Special generation notes
+                        <small>Optional. These notes apply to all three generated shots. The fabric close-up comes from the original photo.</small>
+                        <textarea name="generation_notes" rows="3" maxlength="2000" placeholder="Keep the cuffs unrolled and pair the jeans with plain white sneakers."></textarea>
+                    </label>
+                    <label>Attributes <small>Use Size and Color. Add a separate line for a special option. Blank Size can use labels from the assigned size chart.</small><textarea name="attributes" rows="3"></textarea></label>
+                    <div class="chart-picker">
+                        <label for="size-chart">Size chart <small>Select a reusable chart for this product.</small></label>
+                        <div class="chart-picker-controls">
+                            <select id="size-chart" name="size_chart_id"><option value="">No size chart</option></select>
+                            <button type="button" class="button secondary" id="quick-add-chart" aria-haspopup="dialog">Add size chart</button>
+                        </div>
+                        <p class="chart-selection-status" id="chart-selection-status" role="status"></p>
+                    </div>
+                    <label class="checkbox"><input name="show_size_chart_in_description" type="checkbox"> Show size chart in WooCommerce product description</label>
+                    <div id="assigned-chart" hidden></div>
+                    <div id="review-actions" class="actions">
+                        <button class="button secondary" id="save-details" type="submit">Save edits</button>
+                        <button class="button primary" id="generate" type="submit">Save and generate images</button>
+                        <button class="button secondary" id="approve" type="submit">Approve only</button>
+                        <button class="button primary" id="publish" type="submit">Publish to WooCommerce</button>
+                        <button class="button primary" id="update-listing" type="submit">Update WooCommerce listing</button>
+                    </div>
+                    <p id="listing-dirty" hidden>Saved edits are waiting to be sent to WooCommerce.</p>
+                </form>
+                <dialog class="chart-dialog" id="quick-chart-dialog" aria-labelledby="quick-chart-title">
+                    <div class="chart-dialog-heading">
+                        <h2 id="quick-chart-title">Add a size chart</h2>
+                        <form method="dialog"><button type="submit" class="button secondary">Close</button></form>
+                    </div>
+                    {% include "size_chart_form.html" with form_id="quick-chart-form" in_dialog=True only %}
+                </dialog>
+                <div class="actions">
+                    <button class="button primary" id="retry-images" hidden>Retry missing images</button>
+                    <button class="button secondary" id="retry-extraction" hidden>Extract details again</button>
+                    <a class="button secondary" id="store-link" rel="noopener" target="_blank" hidden>View in store</a>
+                    <button class="button secondary" type="button" id="remove-deleted-listing" hidden>Remove if deleted from store</button>
+                    <button class="button secondary" type="button" data-tab="store">Store connection</button>
+                </div>
+                <details id="social-panel" class="card source-card" hidden>
+                    <summary>Social campaign</summary>
+                    <form id="social-form" class="form-stack">
+                        <label>PNG logo watermark <small id="logo-help">Use an image with a transparent background.</small><input type="file" name="logo" accept="image/png"></label>
+                        <div class="social-channel">
+                            <label>Facebook caption<textarea name="facebook" maxlength="2200" rows="3" required></textarea></label>
+                            <div class="actions"><button class="button secondary" type="button" data-publish-channel="facebook">Publish to Facebook</button></div>
+                            <p class="social-state" id="social-facebook" aria-live="polite" hidden></p>
+                        </div>
+                        <div class="social-channel">
+                            <label>Instagram caption<textarea name="instagram" maxlength="2200" rows="3" required></textarea></label>
+                            <div class="actions"><button class="button secondary" type="button" data-publish-channel="instagram">Publish to Instagram</button></div>
+                            <p class="social-state" id="social-instagram" aria-live="polite" hidden></p>
+                        </div>
+                        <div class="social-channel">
+                            <label>TikTok caption<textarea name="tiktok" maxlength="4000" rows="3" required></textarea></label>
+                            <div class="actions">
+                                <button class="button secondary" type="button" data-publish-channel="tiktok">Send to TikTok inbox</button>
+                                <button class="button secondary" type="button" id="refresh-tiktok" hidden>Check TikTok status</button>
+                            </div>
+                            <p class="social-state" id="social-tiktok" aria-live="polite" hidden></p>
+                        </div>
+                        <div class="actions"><button class="button primary">Download campaign</button><button class="button secondary" id="refresh-captions" type="button">Use suggested captions</button><button class="button secondary" type="button" data-tab="social-settings">Social connections</button></div>
+                    </form>
+                </details>
+                <dialog class="campaign-dialog" id="campaign-confirmation" aria-labelledby="campaign-confirm-title">
+                    <form class="form-stack" id="campaign-confirm-form">
+                        <h2 id="campaign-confirm-title"></h2>
+                        <p id="campaign-account" aria-live="polite"></p>
+                        <div id="campaign-preview" class="campaign-preview"></div>
+                        <label hidden id="campaign-title-field">TikTok title<input name="title" maxlength="90"></label>
+                        <p class="campaign-caption" id="campaign-caption"></p>
+                        <label class="checkbox"><input name="consent" type="checkbox" required> Confirm sending these photos and text to the selected account</label>
+                        <div class="actions">
+                            <button type="button" class="button secondary" id="cancel-campaign">Cancel</button>
+                            <button type="submit" class="button primary" id="confirm-campaign">Confirm</button>
+                        </div>
+                    </form>
+                </dialog>
+                </div>
+                <aside class="card progress-panel" aria-label="Workflow progress">
+                    <h2>Workflow progress</h2>
+                    <p id="progress-current" aria-live="polite"></p>
+                    <p id="progress-model" class="progress-model"></p>
+                    <ol id="progress-steps"></ol>
+                    <dl class="model-summary">
+                        <dt>Catalog copy model</dt><dd>{{ text_model }}</dd>
+                        <dt>On-model provider</dt><dd id="on-model-provider">{{ tryon_model }}</dd>
+                        <dt>Flat lay model</dt><dd id="flat-lay-provider">{{ image_model }}</dd>
+                    </dl>
+                    <button class="button secondary" type="button" data-tab="image-settings">Change image provider</button>
+                    <h3 class="workflow-log-heading">Workflow log</h3>
+                    <ol id="workflow-log" class="workflow-log" aria-label="Workflow log"></ol>
+                </aside>
+                </div>
+            </section>
+            <section id="charts" class="screen" hidden>
+                <header class="page-heading"><h1>Size charts</h1><p>Create an image from measurements or upload an existing chart, then assign it during product review.</p></header>
+                <div class="intake-grid">
+                    {% include "size_chart_form.html" with form_id="chart-form" only %}
+                    <div class="form-stack">
+                        <label>Find a chart<input id="chart-search" type="search" placeholder="Search by chart name"></label>
+                        <div id="chart-list" class="profile-list"></div>
+                    </div>
+                </div>
+            </section>
+            <section id="profiles" class="screen" hidden>
+                <header class="page-heading"><h1>Model profiles</h1><p>Reuse the same reference photos and styling notes across products.</p></header>
+                <div class="intake-grid profile-grid">
+                    <form id="profile-form" class="card form-stack">
+                        <h2 id="profile-form-title">Add a model</h2>
+                        <p>Use photos of the same person with a clear face, even light and an unobstructed silhouette. Saving a profile uses no AI credits.</p>
+                        <label>Profile name<input name="name" required maxlength="255"></label>
+                        <div class="field-grid">
+                            <label>Front photo <small>Same model, head to toe.</small><input name="reference_image" type="file" accept="image/jpeg,image/png,image/webp" required></label>
+                            <label>Side photo <small>Same model, facing sideways.</small><input name="side_reference_image" type="file" accept="image/jpeg,image/png,image/webp" required></label>
+                        </div>
+                        <label>Additional photos <small>Optional. Add up to 3 photos of the same model at once.</small>
+                            <input name="bulk_reference_images" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+                        </label>
+                        <p id="saved-bulk-photos" hidden></p>
+                        <label>Notes <small>Optional</small><textarea name="description" rows="2" maxlength="2000"></textarea></label>
+                        <div class="actions"><button class="button primary" id="save-profile">Save profile</button><button type="button" class="button secondary" id="cancel-profile" hidden>Cancel editing</button></div>
+                    </form>
+                    <div class="profile-list" id="profile-list"></div>
+                </div>
+            </section>
+            <section id="image-settings" class="screen" hidden>
+                <header class="page-heading">
+                    <h1>Image generation</h1>
+                    <p>Choose which provider makes product photos. Product copy, size charts and publishing use their existing connections.</p>
+                </header>
+                <div class="intake-grid">
+                    <form id="image-provider-form" class="card form-stack">
+                        <h2>Image provider</h2>
+                        <label>Provider
+                            <select name="provider" id="image-provider-select" disabled>
+                                <option value="openrouter">OpenRouter</option>
+                                <option id="gemini-option" value="gemini">Gemini</option>
+                            </select>
+                        </label>
+                        <p id="image-provider-status" aria-live="polite">Loading provider settings…</p>
+                        <p id="image-provider-model" hidden></p>
+                        <div class="actions">
+                            <button class="button primary" id="save-image-provider" type="submit" disabled>Save provider</button>
+                            <button class="button secondary" id="return-to-product" type="button" hidden>Return to product</button>
+                        </div>
+                    </form>
+                    <div class="card form-stack">
+                        <h2>Set up Gemini</h2>
+                        <p>Create an API key in Google AI Studio. Set <code>GEMINI_API_KEY</code> in the project's <code>.env</code> file and restart Django. If you need to choose a different compatible image model, set <code>GEMINI_IMAGE_MODEL</code>.</p>
+                        <p>Select Gemini here when you want it to generate images. Select OpenRouter any time to switch back.</p>
+                        <a class="button secondary" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Get a Gemini API key</a>
+                    </div>
+                </div>
+            </section>
+            <section id="store" class="screen" hidden>
+                <header class="page-heading"><h1>Store connection</h1><p>Check WooCommerce access and WordPress media permissions before publishing.</p></header>
+                <div class="intake-grid">
+                    <div class="card form-stack">
+                        <h2>Connection check</h2>
+                        <p>The check reads permissions and product access without uploading images or creating a listing.</p>
+                        <div class="actions"><button class="button primary" id="test-store" type="button">Test connection</button></div>
+                        <div id="store-results" aria-live="polite"></div>
+                    </div>
+                    <div class="card form-stack">
+                        <h2>Connect your store</h2>
+                        <ol class="steps">
+                            <li><strong>WooCommerce products</strong><p>In WooCommerce settings, open Advanced and REST API. Create a Read/Write key and use it with your HTTPS store address in .env.</p></li>
+                            <li><strong>WordPress media</strong><p>In WordPress Users, open Profile and create an Application Password. Use that user's login for WORDPRESS_MEDIA_USER and the generated password for WORDPRESS_MEDIA_APP_PASSWORD.</p></li>
+                            <li><strong>Restart and test</strong><p>Save .env, restart Django and run the connection check.</p></li>
+                        </ol>
+                    </div>
+                </div>
+            </section>
+            <section id="social-settings" class="screen" hidden>
+                <header class="page-heading"><h1>Social connections</h1><p>Verify the Meta and TikTok accounts used for campaigns in product review.</p></header>
+                <div class="intake-grid">
+                    <div class="card form-stack">
+                        <h2>Account check</h2>
+                        <div class="actions"><button class="button primary" id="test-social" type="button">Check social accounts</button></div>
+                        <div id="social-results" aria-live="polite"></div>
+                    </div>
+                    <div class="card form-stack">
+                        <h2>Set up in .env</h2>
+                        <p><strong>Meta app</strong> requires META_APP_ID, META_APP_SECRET and META_GRAPH_API_VERSION.</p>
+                        <p><strong>Facebook</strong> requires FACEBOOK_PAGE_ID and FACEBOOK_PAGE_ACCESS_TOKEN.</p>
+                        <p><strong>Instagram</strong> can use the professional account linked to that Page. If you use Instagram Login, set INSTAGRAM_ACCOUNT_ID and INSTAGRAM_ACCESS_TOKEN instead.</p>
+                        <p><strong>TikTok</strong> requires TIKTOK_ACCESS_TOKEN with upload access and TIKTOK_MEDIA_BASE_URL with a verified HTTPS media prefix. Finish the draft from your TikTok inbox.</p>
+                        <p>Reload Django after saving your settings.</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+</div>
+</body>
+</html>
